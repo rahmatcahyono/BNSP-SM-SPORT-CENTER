@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+enum CourtType {
+  FUTSAL
+  BADMINTON
+}
+
+enum CourtStatus {
+  AVAILABLE
+  MAINTENANCE
+}
+
+enum ReservationStatus {
+  PENDING_PAYMENT
+  AWAITING_REVIEW
+  CONFIRMED
+  CANCELED
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  phoneNumber   String?   @unique
+  password      String
+  role          Role      @default(CUSTOMER)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  reservations  Reservation[]
+  activityLogs  ActivityLog[]
+
+  @@map("users")
+}
+
+model Court {
+  id           String      @id @default(uuid())
+  name         String
+  type         CourtType
+  pricePerHour Decimal     @db.Decimal(10, 2)
+  status       CourtStatus @default(AVAILABLE)
+  openTime     Int         @default(8)  // e.g., 8 for 08:00
+  closeTime    Int         @default(22) // e.g., 22 for 22:00
+  imageUrl     String?     @db.Text     // Base64 or URL string for court image
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  reservations Reservation[]
+
+  @@map("courts")
+}
+
+model Reservation {
+  id            String            @id @default(uuid())
+  invoiceNumber String            @unique
+  userId        String
+  courtId       String
+  date          DateTime          @db.Date
+  startTime     Int               // e.g., 10 for 10:00
+  durationHours Int               @default(1)
+  totalPrice    Decimal           @db.Decimal(10, 2)
+  status        ReservationStatus @default(PENDING_PAYMENT)
+  paymentProof  String?           // URL/Path to uploaded image
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  user          User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  court         Court             @relation(fields: [courtId], references: [id], onDelete: Restrict)
+
+  // Composite unique index to ensure database-level double booking prevention
+  // A specific court cannot be booked at the exact same start time on the same date twice.
+  // Note: This simple unique constraint works if reservations are strictly 1-hour slots.
+  // For multi-hour slots, application-level range checking with FOR UPDATE is still required.
+  @@unique([courtId, date, startTime])
+  @@map("reservations")
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  action      String
+  description String?
+  createdAt   DateTime @default(now())
+
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("activity_logs")
+}

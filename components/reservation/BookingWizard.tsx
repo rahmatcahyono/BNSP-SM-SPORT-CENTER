@@ -27,7 +27,7 @@ export default function BookingWizard({ courts }: { courts: Court[] }) {
   const [dateStr, setDateStr] = useState("");
   const [startTime, setStartTime] = useState<number | "">("");
   const [duration, setDuration] = useState<number>(1);
-  const endTime = startTime !== "" ? startTime + duration : "";
+  const endTime = typeof startTime === "number" ? startTime + duration : "";
 
   const [reservedSlots, setReservedSlots] = useState<{ start: number; end: number }[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -133,12 +133,12 @@ export default function BookingWizard({ courts }: { courts: Court[] }) {
 
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedCourtId || !dateStr || startTime === "" || endTime === "") {
+    if (!selectedCourtId || !dateStr || typeof startTime !== "number" || typeof endTime !== "number") {
       toast("Harap lengkapi semua data reservasi.", "error");
       return;
     }
 
-    if (hasOverlap(startTime, endTime as number)) {
+    if (hasOverlap(startTime, endTime)) {
       toast("Jadwal yang Anda pilih bentrok dengan pesanan lain.", "error");
       return;
     }
@@ -316,9 +316,9 @@ export default function BookingWizard({ courts }: { courts: Court[] }) {
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                     {getOperationalHours().map((hour) => {
                       const booked = isHourBooked(hour);
-                      const isSelected = startTime !== "" && endTime !== "" && hour >= startTime && hour < endTime;
-                      const isStart = hour === startTime;
-                      const isEnd = startTime !== "" && endTime !== "" && hour === (endTime as number) - 1;
+                      const isSelected = typeof startTime === "number" && typeof endTime === "number" && hour >= startTime && hour < endTime;
+                      const isStart = typeof startTime === "number" && hour === startTime;
+                      const isEnd = typeof endTime === "number" && hour === endTime - 1;
                       
                       return (
                         <button
@@ -411,7 +411,7 @@ export default function BookingWizard({ courts }: { courts: Court[] }) {
                 <div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase">Jadwal Main</p>
                   <p className="font-bold text-gray-800 text-base">
-                    {startTime !== "" && endTime !== "" ? `${startTime}:00 - ${endTime}:00` : "Belum Dipilih"}
+                    {`${startTime}:00 - ${endTime}:00`}
                   </p>
                   <p className="text-xs text-emerald-600 font-bold mt-0.5">{actualDuration} Jam</p>
                 </div>
@@ -463,7 +463,7 @@ export default function BookingWizard({ courts }: { courts: Court[] }) {
               <form onSubmit={handleBooking}>
                 <button
                   type="submit"
-                  disabled={submitting || startTime === ""}
+                  disabled={submitting}
                   className="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-4 px-4 rounded-xl transition duration-200 shadow-lg shadow-violet-200 disabled:opacity-50 disabled:shadow-none flex items-center justify-center gap-2 text-base"
                 >
                   {submitting ? (

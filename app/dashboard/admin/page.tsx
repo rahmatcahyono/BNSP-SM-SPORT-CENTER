@@ -97,13 +97,8 @@ export default async function AdminDashboard() {
         {kpiCards.map((card) => {
           const Icon = card.icon;
           const c = colorMap[card.color];
-          const Wrapper = card.href ? Link : "div";
-          return (
-            <Wrapper
-              key={card.label}
-              {...(card.href ? { href: card.href } : {})}
-              className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow duration-200 relative overflow-hidden group"
-            >
+          const content = (
+            <>
               {/* Sparkline Background */}
               <svg className="absolute bottom-0 left-0 w-full h-16 opacity-10 group-hover:opacity-20 transition-opacity" preserveAspectRatio="none" viewBox="0 0 100 30">
                 <path d={card.sparkline} fill="none" stroke="currentColor" strokeWidth="2" className={c.text} />
@@ -126,7 +121,19 @@ export default async function AdminDashboard() {
                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${c.badge}`}>{card.sub}</span>
                 {card.href && <ArrowUpRight size={14} className="text-gray-400" />}
               </div>
-            </Wrapper>
+            </>
+          );
+
+          const className = "bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col gap-3 hover:shadow-md transition-shadow duration-200 relative overflow-hidden group";
+
+          return card.href ? (
+            <Link key={card.label} href={card.href} className={className}>
+              {content}
+            </Link>
+          ) : (
+            <div key={card.label} className={className}>
+              {content}
+            </div>
           );
         })}
       </div>

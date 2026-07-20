@@ -1,29 +1,27 @@
 import { PrismaClient } from "@prisma/client";
-import { Pool } from "pg";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "@neondatabase/serverless";
+import { PrismaNeon } from "@prisma/adapter-neon";
 
-let connectionString = process.env.DATABASE_URL || "";
-if (connectionString.includes("sslmode=require") && !connectionString.includes("uselibpqcompat")) {
-  connectionString += "&uselibpqcompat=true";
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  console.error("CRITICAL ERROR: process.env.DATABASE_URL is undefined or empty!");
 }
 
 declare global {
   var prisma: PrismaClient | undefined;
 }
 
-let prisma: PrismaClient;
+const pool = new Pool({ connectionString: connectionString || "" });
+const adapter = new PrismaNeon(pool);
 
-if (process.env.NODE_ENV === "production") {
-  const pool = new Pool({ connectionString });
-  const adapter = new PrismaPg(pool);
-  prisma = new PrismaClient({ adapter });
-} else {
-  // Re-create Prisma Client on every reload during development
-  // to ensure new database schema columns are loaded immediately.
-  const pool = new Pool({ connectionString });
-  const adapter = new PrismaPg(pool);
-  globalThis.prisma = new PrismaClient({ adapter });
-  prisma = globalThis.prisma;
+export const prisma =
+  globalThis.prisma ||
+  new PrismaClient({
+    adapter,
+  });
+
+if (process.env.NODE_ENV !== "production") {
+  globalThis.prisma = prisma;
 }
 
-export { prisma };

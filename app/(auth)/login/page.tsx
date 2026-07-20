@@ -30,8 +30,9 @@ export default function LoginPage() {
         toast(res.error, "error");
       } else {
         toast("Login berhasil!", "success");
-        router.refresh();
-        router.push("/dashboard");
+        const url = new URL(window.location.href);
+        const callbackUrl = url.searchParams.get("callbackUrl") || "/dashboard";
+        window.location.href = callbackUrl;
       }
     } catch (err: any) {
       toast("Terjadi kesalahan sistem", "error");

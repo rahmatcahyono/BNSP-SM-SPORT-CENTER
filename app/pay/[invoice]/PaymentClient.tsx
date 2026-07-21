@@ -75,7 +75,7 @@ export default function PaymentClient({
         </div>
 
         <p className="text-xs text-gray-400 mt-8 leading-relaxed">
-          Lunas terbayar via QRIS Dinamis. Layar komputer Anda di lokasi pemesanan akan otomatis diperbarui dan memunculkan E-Tiket dalam waktu singkat. Anda sekarang dapat menutup tab ini.
+          Lunas terbayar via QRIS. Layar komputer Anda di lokasi pemesanan akan otomatis diperbarui dan memunculkan E-Tiket dalam waktu singkat. Anda sekarang dapat menutup tab ini.
         </p>
       </div>
     );
@@ -107,7 +107,7 @@ export default function PaymentClient({
         <div className="flex justify-between items-center text-sm">
           <span className="text-gray-500">Metode Pembayaran</span>
           <span className="font-bold text-gray-800 flex items-center gap-1.5">
-            <Smartphone size={14} /> QRIS Dinamis
+            <Smartphone size={14} /> QRIS
           </span>
         </div>
         

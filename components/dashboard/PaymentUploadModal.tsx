@@ -310,7 +310,7 @@ export default function PaymentUploadModal({
                 {/* QRIS Badge */}
                 <div className="mt-4 flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-1.5 shadow-sm relative z-10">
                   <QrCode size={14} className="text-violet-600" />
-                  <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wider">QRIS Dinamis</span>
+                  <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wider">QRIS</span>
                 </div>
 
                 {/* Detail info */}
@@ -341,7 +341,7 @@ export default function PaymentUploadModal({
                   <li>Buka aplikasi E-Wallet atau M-Banking Anda</li>
                   <li>Pilih menu <strong>Scan QR / Pay</strong></li>
                   <li>Arahkan kamera ke QR Code di atas</li>
-                  <li>Pastikan nominal sesuai, lalu konfirmasi pembayaran</li>
+                  <li>Konfirmasi pembayaran (Nominal otomatis terisi)</li>
                   <li>Sistem akan memverifikasi pembayaran Anda otomatis</li>
                 </ol>
               </div>

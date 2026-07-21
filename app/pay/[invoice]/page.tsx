@@ -9,9 +9,9 @@ export const metadata = {
 export default async function PayInvoicePage({
   params,
 }: {
-  params: { invoice: string };
+  params: Promise<{ invoice: string }>;
 }) {
-  const invoice = params.invoice;
+  const { invoice } = await params;
 
   const reservation = await prisma.reservation.findUnique({
     where: { invoiceNumber: invoice },

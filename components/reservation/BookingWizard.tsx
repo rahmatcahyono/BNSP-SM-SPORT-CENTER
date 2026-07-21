@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getReservationsByDateAction, createReservationAction, getCourtBookingCountsAction } from "@/actions/reservation.actions";
 import { useToast } from "@/components/Providers";
-import { Calendar, Clock, Trophy, MapPin, CheckCircle2, AlertCircle, Shield, Check, Info } from "lucide-react";
+import { Calendar, Clock, Trophy, MapPin, CheckCircle2, AlertCircle, Shield, Check, Info, QrCode } from "lucide-react";
 import CustomCalendar from "./CustomCalendar";
 
 interface Court {
@@ -436,8 +436,31 @@ export default function BookingWizard({ courts }: { courts: Court[] }) {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Info Pembayaran QRIS Dinamis */}
+              <div className="border-t border-gray-100 pt-5">
+                <p className="text-[10px] font-bold text-gray-400 uppercase mb-3">Atau Bayar via QRIS</p>
+                <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200 rounded-xl p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm">
+                      <QrCode size={20} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-800">QRIS Dinamis</p>
+                      <p className="text-[11px] text-gray-500">QR Code unik per transaksi</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {["GoPay", "OVO", "DANA", "ShopeePay", "M-Banking"].map((w) => (
+                      <span key={w} className="text-[9px] font-bold text-violet-600 bg-white border border-violet-200 px-2 py-0.5 rounded-md">
+                        {w}
+                      </span>
+                    ))}
+                  </div>
+                </div>
                 <p className="text-[10px] text-gray-400 mt-2 flex items-center gap-1">
-                  <Info size={12} /> Bukti transfer wajib diunggah setelah booking berhasil dibuat.
+                  <Info size={12} /> Bukti transfer/screenshot QRIS wajib diunggah setelah booking berhasil dibuat.
                 </p>
               </div>
             </div>

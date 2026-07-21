@@ -23,7 +23,7 @@ interface Booking {
 }
 
 export default function CustomerBookingList({ bookings }: { bookings: Booking[] }) {
-  const [selectedBooking, setSelectedBooking] = useState<{ id: string; invoiceNumber: string; totalPrice: number } | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<{ id: string; invoiceNumber: string; totalPrice: number; courtName: string; schedule: string } | null>(null);
   const { toast } = useToast();
 
   const getStatusBadgeClass = (status: string) => {
@@ -118,10 +118,16 @@ export default function CustomerBookingList({ bookings }: { bookings: Booking[] 
                     <div className="flex items-center justify-end gap-2">
                       {booking.status === "PENDING_PAYMENT" && (
                         <button
-                          onClick={() => setSelectedBooking({ id: booking.id, invoiceNumber: booking.invoiceNumber, totalPrice: booking.totalPrice })}
-                          className="px-3.5 py-1.5 text-xs font-bold text-white bg-violet-600 hover:bg-violet-700 rounded-lg shadow-sm shadow-violet-200 transition"
+                          onClick={() => setSelectedBooking({
+                            id: booking.id,
+                            invoiceNumber: booking.invoiceNumber,
+                            totalPrice: booking.totalPrice,
+                            courtName: booking.court.name,
+                            schedule: `${new Date(booking.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} • ${booking.startTime}:00 - ${booking.startTime + booking.durationHours}:00`,
+                          })}
+                          className="px-3.5 py-1.5 text-xs font-bold text-white bg-violet-600 hover:bg-violet-700 rounded-lg shadow-sm shadow-violet-200 transition flex items-center gap-1.5"
                         >
-                          Bayar & Upload
+                          <QrCode size={14} /> Bayar QRIS
                         </button>
                       )}
                       
@@ -175,6 +181,8 @@ export default function CustomerBookingList({ bookings }: { bookings: Booking[] 
           reservationId={selectedBooking.id}
           invoiceNo={selectedBooking.invoiceNumber}
           totalPrice={selectedBooking.totalPrice}
+          courtName={selectedBooking.courtName}
+          schedule={selectedBooking.schedule}
           onClose={() => setSelectedBooking(null)}
         />
       )}

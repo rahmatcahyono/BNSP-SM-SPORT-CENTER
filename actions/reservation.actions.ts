@@ -268,3 +268,64 @@ export async function getCourtBookingCountsAction(dateStr: string) {
     return { success: false, error: error.message };
   }
 }
+
+export async function checkPaymentStatusAction(reservationId: string) {
+  try {
+    const reservation = await prisma.reservation.findUnique({
+      where: { id: reservationId },
+      select: { status: true },
+    });
+
+    if (!reservation) {
+      return { success: false, error: "Reservasi tidak ditemukan." };
+    }
+
+    return { success: true, status: reservation.status };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Gagal mengecek status pembayaran." };
+  }
+}
+
+export async function simulateWebhookAction(invoiceNumber: string, totalPrice: number) {
+  try {
+    const crypto = require("crypto");
+    const serverKey = process.env.PAYMENT_GATEWAY_SERVER_KEY || "simulated-server-key-123";
+    
+    // Construct exactly what the webhook expects
+    const payload = {
+      order_id: invoiceNumber,
+      transaction_status: "settlement",
+      statusCode: "200",
+      gross_amount: totalPrice.toString(),
+      signature_key: crypto.createHash("sha512").update(`${invoiceNumber}200${totalPrice}${serverKey}`).digest("hex")
+    };
+
+    // Since we are in the same Next.js app, we can fetch our own API if we know the URL.
+    // However, a more robust way in a Server Action is to directly call the webhook route handler's logic.
+    // But since route handlers are separate, let's just do a direct DB update here to simulate what the webhook does
+    // so we don't have to guess the absolute URL.
+    
+    const updatedReservation = await prisma.reservation.update({
+      where: { invoiceNumber: invoiceNumber },
+      data: {
+        status: "CONFIRMED",
+        expiresAt: null,
+      },
+    });
+
+    await prisma.activityLog.create({
+      data: {
+        userId: updatedReservation.userId,
+        action: "PAYMENT_SUCCESS",
+        description: `Pembayaran otomatis via QRIS (Webhook Simulator) sukses untuk Invoice ${invoiceNumber}`,
+      },
+    });
+
+    revalidatePath("/dashboard/customer");
+    revalidatePath("/dashboard/admin/bookings");
+
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}

@@ -85,6 +85,10 @@ export class ReservationService {
       const totalPrice = new Prisma.Decimal(priceVal * durationHours);
       const invoiceNumber = this.generateInvoiceNo();
 
+      // Set expiration time (15 minutes from now)
+      const expiresAt = new Date();
+      expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+
       // Create reservation
       const reservation = await tx.reservation.create({
         data: {
@@ -96,6 +100,7 @@ export class ReservationService {
           durationHours,
           totalPrice,
           status: "PENDING_PAYMENT",
+          expiresAt,
         },
       });
 

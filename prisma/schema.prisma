@@ -73,6 +73,7 @@ model Reservation {
   totalPrice    Decimal           @db.Decimal(10, 2)
   status        ReservationStatus @default(PENDING_PAYMENT)
   paymentProof  String?           // URL/Path to uploaded image
+  expiresAt     DateTime?         // Automatic payment expiration time
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 

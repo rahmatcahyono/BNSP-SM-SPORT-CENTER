@@ -4,8 +4,9 @@ import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { CheckCircle2, AlertCircle } from "lucide-react";
+import { CheckCircle2, AlertCircle, QrCode } from "lucide-react";
 import PrintInvoiceButton from "@/components/dashboard/PrintInvoiceButton";
+import QrisInvoiceQR from "@/components/dashboard/QrisInvoiceQR";
 
 export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -83,7 +84,19 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
 
           <div className="flex justify-between items-center text-sm">
             <span className="text-gray-500 font-medium">Metode Pembayaran</span>
-            <span className="font-bold text-gray-800">Transfer / QRIS</span>
+            <span className="font-bold text-gray-800 flex items-center gap-1.5">
+              <QrCode size={14} className="text-violet-600" /> QRIS Dinamis
+            </span>
+          </div>
+
+          {/* Mini QRIS QR Code on Invoice */}
+          <div className="flex justify-center pt-4 border-t border-dashed border-gray-200 mt-4">
+            <QrisInvoiceQR
+              invoiceNumber={reservation.invoiceNumber}
+              totalPrice={Number(reservation.totalPrice)}
+              courtName={reservation.court.name}
+              schedule={`${new Date(reservation.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} • ${reservation.startTime}:00 - ${reservation.startTime + reservation.durationHours}:00`}
+            />
           </div>
 
           <div className="border-t border-gray-100 pt-6">

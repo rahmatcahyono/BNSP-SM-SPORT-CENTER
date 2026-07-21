@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import PaymentUploadModal from "./PaymentUploadModal";
-import { Printer, RefreshCw, QrCode } from "lucide-react";
+import { Printer, RefreshCw, QrCode, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useToast } from "../Providers";
 
@@ -127,7 +127,7 @@ export default function CustomerBookingList({ bookings }: { bookings: Booking[] 
                           })}
                           className="px-3.5 py-1.5 text-xs font-bold text-white bg-violet-600 hover:bg-violet-700 rounded-lg shadow-sm shadow-violet-200 transition flex items-center gap-1.5"
                         >
-                          <QrCode size={14} /> Bayar QRIS
+                          <Wallet size={14} /> Selesaikan Pembayaran
                         </button>
                       )}
                       

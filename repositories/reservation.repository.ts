@@ -173,7 +173,7 @@ export class ReservationRepository {
   }
 
   static async getPendingVerifications(limit: number = 5) {
-    return prisma.reservation.findMany({
+    const reservations = await prisma.reservation.findMany({
       where: { status: "AWAITING_REVIEW" },
       include: {
         user: { select: { name: true, email: true } },
@@ -182,5 +182,12 @@ export class ReservationRepository {
       orderBy: { createdAt: "desc" },
       take: limit,
     });
+
+    return reservations.map(r => ({
+      ...r,
+      totalPrice: Number(r.totalPrice),
+      discountApplied: r.discountApplied ? Number(r.discountApplied) : null,
+      originalPrice: r.originalPrice ? Number(r.originalPrice) : null,
+    }));
   }
 }

@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getReservationsByDateAction, createReservationAction, getCourtBookingCountsAction } from "@/actions/reservation.actions";
+import { validateVoucherAction } from "@/actions/voucher.actions";
 import { useToast } from "@/components/Providers";
-import { Calendar, Clock, Trophy, MapPin, CheckCircle2, AlertCircle, Shield, Check, Info, QrCode } from "lucide-react";
+import { Calendar, Clock, Trophy, MapPin, CheckCircle2, AlertCircle, Shield, Check, Info, QrCode, Tag, Loader2 } from "lucide-react";
 import CustomCalendar from "./CustomCalendar";
 
 interface Court {
@@ -20,18 +21,28 @@ interface Court {
 
 export default function BookingWizard({ courts }: { courts: Court[] }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
 
+  const initCourtId = searchParams.get("courtId") || "";
+  const initDate = searchParams.get("date") || "";
+  const initStartTime = searchParams.get("startTime") ? parseInt(searchParams.get("startTime") as string, 10) : "";
+
   const [category, setCategory] = useState<"ALL" | "FUTSAL" | "BADMINTON">("ALL");
-  const [selectedCourtId, setSelectedCourtId] = useState("");
-  const [dateStr, setDateStr] = useState("");
-  const [startTime, setStartTime] = useState<number | "">("");
+  const [selectedCourtId, setSelectedCourtId] = useState(initCourtId);
+  const [dateStr, setDateStr] = useState(initDate);
+  const [startTime, setStartTime] = useState<number | "">(initStartTime);
   const [duration, setDuration] = useState<number>(1);
   const endTime = typeof startTime === "number" ? startTime + duration : "";
 
   const [reservedSlots, setReservedSlots] = useState<{ start: number; end: number }[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const [voucherCode, setVoucherCode] = useState("");
+  const [validatedVoucher, setValidatedVoucher] = useState<any>(null);
+  const [checkingVoucher, setCheckingVoucher] = useState(false);
+  const [voucherMessage, setVoucherMessage] = useState({ text: "", type: "" });
 
   const [courtBookingCounts, setCourtBookingCounts] = useState<Record<string, number>>({});
   const [loadingCounts, setLoadingCounts] = useState(false);
@@ -40,13 +51,23 @@ export default function BookingWizard({ courts }: { courts: Court[] }) {
 
   const filteredCourts = courts.filter(c => category === "ALL" || c.type === category);
 
-  // Set default date to today
+  // Set default date to today if not provided via searchParams
   useEffect(() => {
-    const today = new Date();
-    const tzOffset = today.getTimezoneOffset() * 60000;
-    const localISOTime = new Date(today.getTime() - tzOffset).toISOString().split("T")[0];
-    setDateStr(localISOTime);
-  }, []);
+    if (!initDate) {
+      const today = new Date();
+      const tzOffset = today.getTimezoneOffset() * 60000;
+      const localISOTime = new Date(today.getTime() - tzOffset).toISOString().split("T")[0];
+      setDateStr(localISOTime);
+    }
+  }, [initDate]);
+
+  // If courtId is passed but not category, try to auto-select category
+  useEffect(() => {
+    if (initCourtId && category === "ALL") {
+      const c = courts.find(x => x.id === initCourtId);
+      if (c) setCategory(c.type);
+    }
+  }, [initCourtId, courts, category]);
 
   // Fetch court booking counts
   useEffect(() => {
@@ -70,7 +91,9 @@ export default function BookingWizard({ courts }: { courts: Court[] }) {
     if (!selectedCourtId || !dateStr) return;
     async function fetchSlots() {
       setLoadingSlots(true);
-      setStartTime("");
+      if (!initStartTime || selectedCourtId !== initCourtId || dateStr !== initDate) {
+         setStartTime("");
+      }
       setDuration(1);
       try {
         const res = await getReservationsByDateAction(selectedCourtId, dateStr);
@@ -150,11 +173,12 @@ export default function BookingWizard({ courts }: { courts: Court[] }) {
         dateStr,
         startTime,
         endTime,
+        voucherCode: validatedVoucher ? voucherCode : undefined,
       });
 
       if (res.success) {
         toast(res.message, "success");
-        router.push("/dashboard/customer");
+        router.push("/dashboard/customer/bookings");
       } else {
         toast(res.error || "Gagal membuat reservasi.", "error");
       }
@@ -176,9 +200,36 @@ export default function BookingWizard({ courts }: { courts: Court[] }) {
 
   const actualDuration = startTime !== "" ? duration : 0;
   const totalPrice = selectedCourt ? selectedCourt.pricePerHour * actualDuration : 0;
-  const tax = totalPrice * 0.11; // 11% PPN example
-  const grandTotal = totalPrice + tax;
+  
+  let calculatedDiscount = 0;
+  if (validatedVoucher) {
+    if (validatedVoucher.discountType === "PERCENTAGE") {
+      calculatedDiscount = (totalPrice * validatedVoucher.discountPercent) / 100;
+    } else {
+      calculatedDiscount = validatedVoucher.discountNominal || 0;
+    }
+  }
+
+  const priceAfterVoucher = Math.max(0, totalPrice - calculatedDiscount);
+  const tax = priceAfterVoucher * 0.11; // 11% PPN example
+  const grandTotal = priceAfterVoucher + tax;
   const getTotalSlots = (court: Court) => court.closeTime - court.openTime;
+
+  const handleCheckVoucher = async () => {
+    if (!voucherCode) return;
+    setCheckingVoucher(true);
+    setVoucherMessage({ text: "", type: "" });
+    const res = await validateVoucherAction(voucherCode);
+    setCheckingVoucher(false);
+
+    if (res.success && res.data) {
+      setValidatedVoucher(res.data);
+      setVoucherMessage({ text: "Voucher berhasil digunakan!", type: "success" });
+    } else {
+      setValidatedVoucher(null);
+      setVoucherMessage({ text: res.error || "Voucher tidak valid", type: "error" });
+    }
+  };
 
   return (
     <div className="w-full space-y-8">
@@ -438,16 +489,14 @@ export default function BookingWizard({ courts }: { courts: Court[] }) {
                 </div>
               </div>
 
-              {/* Info Pembayaran QRIS Dinamis */}
+              {/* Info Pembayaran QRIS */}
               <div className="border-t border-gray-100 pt-5">
                 <p className="text-[10px] font-bold text-gray-400 uppercase mb-3">Atau Bayar via QRIS</p>
                 <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border border-violet-200 rounded-xl p-4">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm">
-                      <QrCode size={20} />
-                    </div>
+                    <img src="/qris-logo.png" alt="QRIS" className="h-8 object-contain" />
                     <div>
-                      <p className="text-sm font-bold text-gray-800">QRIS Dinamis</p>
+                      <p className="text-sm font-bold text-gray-800">QRIS</p>
                       <p className="text-[11px] text-gray-500">QR Code unik per transaksi</p>
                     </div>
                   </div>
@@ -467,12 +516,57 @@ export default function BookingWizard({ courts }: { courts: Court[] }) {
 
             {/* Kanan: Rincian Biaya & Tombol Submit */}
             <div className="space-y-5">
+              
+              {/* Voucher Input */}
+              <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+                <label className="block text-xs font-bold text-gray-800 uppercase tracking-widest mb-2 flex items-center gap-1">
+                  <Tag size={14} className="text-violet-600" /> Punya Kode Voucher?
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={voucherCode}
+                    onChange={(e) => {
+                      setVoucherCode(e.target.value.toUpperCase());
+                      setValidatedVoucher(null);
+                      setVoucherMessage({ text: "", type: "" });
+                    }}
+                    placeholder="Masukkan kode promo"
+                    className="flex-1 border border-gray-300 rounded-lg px-3 text-sm focus:ring-violet-500 focus:border-violet-500 uppercase"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCheckVoucher}
+                    disabled={checkingVoucher || !voucherCode}
+                    className="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded-lg text-sm font-bold transition disabled:opacity-50 flex items-center justify-center min-w-[80px]"
+                  >
+                    {checkingVoucher ? <Loader2 size={16} className="animate-spin" /> : "Gunakan"}
+                  </button>
+                </div>
+                {voucherMessage.text && (
+                  <p className={`mt-2 text-xs font-medium ${voucherMessage.type === 'success' ? 'text-emerald-600' : 'text-red-500'}`}>
+                    {voucherMessage.text}
+                  </p>
+                )}
+              </div>
+
               <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 space-y-3">
                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Rincian Biaya</h4>
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>{selectedCourt.name} × {actualDuration} Jam</span>
-                  <span className="font-bold text-gray-800">Rp {totalPrice.toLocaleString()}</span>
+                  <span className={validatedVoucher ? "line-through text-gray-400" : "font-bold text-gray-800"}>
+                    Rp {totalPrice.toLocaleString()}
+                  </span>
                 </div>
+                {validatedVoucher && (
+                  <div className="flex justify-between items-center text-emerald-600 font-medium">
+                    <span className="text-gray-600 font-normal">
+                      Potongan Voucher
+                      {validatedVoucher?.discountType === "PERCENTAGE" && ` (${validatedVoucher.discountPercent}%)`}
+                    </span>
+                    <span>- Rp {calculatedDiscount.toLocaleString('id-ID')}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm text-gray-600">
                   <span>PPN (11%)</span>
                   <span className="font-bold text-gray-800">Rp {tax.toLocaleString()}</span>

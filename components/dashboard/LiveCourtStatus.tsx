@@ -17,9 +17,10 @@ type LiveCourt = {
 
 interface LiveCourtStatusProps {
   courts: LiveCourt[];
+  hideUserDetails?: boolean;
 }
 
-export default function LiveCourtStatus({ courts }: LiveCourtStatusProps) {
+export default function LiveCourtStatus({ courts, hideUserDetails = false }: LiveCourtStatusProps) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
@@ -82,10 +83,12 @@ export default function LiveCourtStatus({ courts }: LiveCourtStatusProps) {
                 {isOccupied && court.currentBooking && (
                   <div className="mt-3 text-sm border-t border-rose-200/50 pt-2 text-rose-800 font-medium flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full bg-rose-200 text-rose-700 flex items-center justify-center text-xs">
-                      {court.currentBooking.userName.charAt(0).toUpperCase()}
+                      {hideUserDetails ? "P" : court.currentBooking.userName.charAt(0).toUpperCase()}
                     </div>
                     <div className="truncate">
-                      <p className="truncate text-xs">{court.currentBooking.userName}</p>
+                      <p className="truncate text-xs">
+                        {hideUserDetails ? "Pelanggan" : court.currentBooking.userName}
+                      </p>
                       <p className="text-[10px] opacity-70">
                         {court.currentBooking.startTime}:00 - {court.currentBooking.endTime}:00
                       </p>

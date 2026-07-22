@@ -35,7 +35,8 @@ export default function Sidebar() {
   ];
 
   const customerLinks = [
-    { name: "My Bookings", href: "/dashboard/customer", icon: History },
+    { name: "Dashboard", href: "/dashboard/customer", icon: LayoutDashboard },
+    { name: "My Bookings", href: "/dashboard/customer/bookings", icon: History },
     { name: "Pesan Lapangan", href: "/dashboard/customer/reservation", icon: CalendarDays },
   ];
 

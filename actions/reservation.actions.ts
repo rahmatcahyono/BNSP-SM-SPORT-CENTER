@@ -10,6 +10,7 @@ import { z } from "zod";
 import fs from "fs/promises";
 import path from "path";
 import { LogService } from "@/services/log.service";
+import { serializeForClient } from "@/lib/serialize";
 
 // Verify session helper
 async function verifySession() {
@@ -42,6 +43,7 @@ export async function createReservationAction(
       dateStr: validatedData.dateStr,
       startTime: validatedData.startTime,
       endTime: validatedData.endTime,
+      voucherCode: validatedData.voucherCode,
     });
 
     revalidatePath("/dashboard/customer");
@@ -64,6 +66,7 @@ export async function uploadPaymentProofAction(formData: FormData) {
 
     const reservationId = formData.get("reservationId") as string;
     const file = formData.get("file") as File;
+    const paymentMethod = (formData.get("paymentMethod") as string) || "TRANSFER_BANK";
 
     if (!reservationId || !file) {
       throw new Error("ID Reservasi dan Bukti Pembayaran wajib disertakan.");
@@ -89,7 +92,8 @@ export async function uploadPaymentProofAction(formData: FormData) {
     await ReservationService.uploadPaymentProof(
       reservationId,
       user.id,
-      paymentProofUrl
+      paymentProofUrl,
+      paymentMethod as "TRANSFER_BANK" | "QRIS"
     );
 
     revalidatePath("/dashboard/customer");
@@ -309,6 +313,7 @@ export async function simulateWebhookAction(invoiceNumber: string, totalPrice: n
       where: { invoiceNumber: invoiceNumber },
       data: {
         status: "CONFIRMED",
+        paymentMethod: "QRIS",
         expiresAt: null,
       },
     });
@@ -327,5 +332,45 @@ export async function simulateWebhookAction(invoiceNumber: string, totalPrice: n
     return { success: true };
   } catch (error: any) {
     return { success: false, error: error.message };
+  }
+}
+
+export async function getAllCourtsAvailabilityAction(dateStr: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      throw new Error("Akses ditolak.");
+    }
+
+    const date = new Date(dateStr);
+    date.setHours(0, 0, 0, 0);
+
+    const courts = await prisma.court.findMany({
+      orderBy: { name: "asc" }
+    });
+
+    const reservations = await prisma.reservation.findMany({
+      where: {
+        date,
+        status: { in: ["PENDING_PAYMENT", "AWAITING_REVIEW", "CONFIRMED"] },
+      }
+    });
+
+    const data = courts.map(court => {
+      const courtReservations = reservations.filter(r => r.courtId === court.id);
+      const bookedSlots = courtReservations.map(r => ({
+        start: r.startTime,
+        end: r.startTime + r.durationHours,
+      }));
+
+      return {
+        ...court,
+        bookedSlots,
+      };
+    });
+
+    return { success: true, data: serializeForClient(data) };
+  } catch (error: any) {
+    return { success: false, error: error.message || "Gagal mengambil data ketersediaan lapangan." };
   }
 }

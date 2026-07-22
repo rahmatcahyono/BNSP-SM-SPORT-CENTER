@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { reviewReservationAction } from "@/actions/reservation.actions";
 import { useToast } from "@/components/Providers";
 import { Check, X, Printer } from "lucide-react";
+import { Alert } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 
 interface Booking {
   id: string;
@@ -29,13 +31,23 @@ export default function AdminBookingList({ bookings }: { bookings: Booking[] }) 
   const { toast } = useToast();
   const [activeImage, setActiveImage] = useState<string | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; id: string; status: "APPROVED" | "REJECTED" | null }>({
+    isOpen: false,
+    id: "",
+    status: null,
+  });
 
-  const handleReview = async (id: string, status: "APPROVED" | "REJECTED") => {
-    if (!confirm(`Apakah Anda yakin ingin ${status === "APPROVED" ? "menyetujui" : "menolak"} booking ini?`)) {
-      return;
-    }
+  const handleReview = (id: string, status: "APPROVED" | "REJECTED") => {
+    setConfirmDialog({ isOpen: true, id, status });
+  };
+
+  const executeReview = async () => {
+    const { id, status } = confirmDialog;
+    if (!id || !status) return;
 
     setActionLoadingId(id);
+    setConfirmDialog({ isOpen: false, id: "", status: null });
+
     try {
       const res = await reviewReservationAction({ reservationId: id, status });
 
@@ -227,6 +239,55 @@ export default function AdminBookingList({ bookings }: { bookings: Booking[] }) 
               ✕
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Custom Confirmation Dialog using Alert */}
+      {confirmDialog.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4">
+          <Alert
+            className="w-full max-w-md bg-white text-gray-900 border-0 shadow-2xl rounded-2xl p-6 ring-1 ring-black/5"
+            layout="complex"
+            isNotification
+            size="lg"
+            action={
+              <button
+                onClick={() => setConfirmDialog({ isOpen: false, id: "", status: null })}
+                className="group -my-1.5 -me-2 size-8 p-0 hover:bg-transparent inline-flex items-center justify-center bg-transparent border-0 cursor-pointer"
+                aria-label="Close notification"
+              >
+                <X
+                  size={16}
+                  strokeWidth={2}
+                  className="opacity-60 transition-opacity group-hover:opacity-100 text-gray-500"
+                />
+              </button>
+            }
+          >
+            <div className="flex gap-3">
+              <div className={`flex items-center justify-center shrink-0 size-9 rounded-full ${confirmDialog.status === 'APPROVED' ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-600'}`}>
+                {confirmDialog.status === 'APPROVED' ? <Check size={18} /> : <X size={18} />}
+              </div>
+              <div className="flex grow flex-col gap-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-gray-900">
+                    Konfirmasi {confirmDialog.status === "APPROVED" ? "Persetujuan" : "Penolakan"}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Apakah Anda yakin ingin {confirmDialog.status === "APPROVED" ? "menyetujui" : "menolak"} booking ini?
+                  </p>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <Button size="sm" onClick={executeReview} variant={confirmDialog.status === "APPROVED" ? "success" : "destructive"} className="px-5">
+                    Ya, {confirmDialog.status === "APPROVED" ? "Setuju" : "Tolak"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setConfirmDialog({ isOpen: false, id: "", status: null })} className="px-5">
+                    Batal
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Alert>
         </div>
       )}
     </div>

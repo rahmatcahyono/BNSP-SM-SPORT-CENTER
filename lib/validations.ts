@@ -27,4 +27,5 @@ export const ReservationSchema = z.object({
   dateStr: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal tidak valid (YYYY-MM-DD)"),
   startTime: z.number().min(0).max(23),
   endTime: z.number().min(0).max(23),
+  voucherCode: z.string().optional(),
 });

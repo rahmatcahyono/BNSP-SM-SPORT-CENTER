@@ -123,6 +123,7 @@ export default function PaymentUploadModal({
     const formData = new FormData();
     formData.append("reservationId", reservationId);
     formData.append("file", file);
+    formData.append("paymentMethod", paymentMethod === "QRIS" ? "QRIS" : "TRANSFER_BANK");
 
     try {
       const res = await uploadPaymentProofAction(formData);
@@ -254,7 +255,7 @@ export default function PaymentUploadModal({
               </div>
             </div>
           ) : (
-            /* === TAB: QRIS Dinamis === */
+            /* === TAB: QRIS === */
             <div className="mb-2">
 
               {/* Countdown Timer */}
@@ -309,8 +310,7 @@ export default function PaymentUploadModal({
 
                 {/* QRIS Badge */}
                 <div className="mt-4 flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-3 py-1.5 shadow-sm relative z-10">
-                  <QrCode size={14} className="text-violet-600" />
-                  <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wider">QRIS</span>
+                  <img src="/qris-logo.png" alt="QRIS" className="h-5 object-contain" />
                 </div>
 
                 {/* Detail info */}

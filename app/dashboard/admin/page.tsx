@@ -9,6 +9,8 @@ import AdminAnalytics from "@/components/dashboard/AdminAnalytics";
 import LiveCourtStatus from "@/components/dashboard/LiveCourtStatus";
 import PendingVerificationWidget from "@/components/dashboard/PendingVerificationWidget";
 import WalkInModalTrigger from "@/components/dashboard/WalkInModalTrigger";
+import AnnouncementManager from "@/components/dashboard/AnnouncementManager";
+import { prisma } from "@/lib/prisma";
 
 export default async function AdminDashboard() {
   const session = await getServerSession(authOptions);
@@ -17,12 +19,13 @@ export default async function AdminDashboard() {
     redirect("/login");
   }
 
-  const [stats, recentLogs, analytics, liveCourts, pendingReviewsData] = await Promise.all([
+  const [stats, recentLogs, analytics, liveCourts, pendingReviewsData, announcements] = await Promise.all([
     ReservationRepository.getStats(),
     ReservationRepository.getRecentLogs(10),
     ReservationRepository.getDashboardAnalytics(),
     ReservationRepository.getLiveCourtStatus(),
     ReservationRepository.getPendingVerifications(5),
+    prisma.announcement.findMany({ orderBy: { createdAt: "desc" } }),
   ]);
 
   const kpiCards = [
@@ -152,6 +155,9 @@ export default async function AdminDashboard() {
           <PendingVerificationWidget bookings={pendingReviewsData} />
         </div>
       </div>
+
+      {/* Announcement Manager (Full Width) */}
+      <AnnouncementManager initialData={announcements} />
 
       {/* Activity Log */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -26,7 +26,9 @@ export default async function ReservationPage() {
         </p>
       </div>
 
-      <BookingWizard courts={serializeForClient(courts) as any} />
+      <Suspense fallback={<div className="p-8 text-center text-gray-500">Memuat formulir pemesanan...</div>}>
+        <BookingWizard courts={serializeForClient(courts) as any} />
+      </Suspense>
     </div>
   );
 }

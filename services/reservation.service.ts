@@ -17,12 +17,14 @@ export class ReservationService {
     dateStr,
     startTime,
     endTime,
+    voucherCode,
   }: {
     userId: string;
     courtId: string;
     dateStr: string;
     startTime: number;
     endTime: number;
+    voucherCode?: string;
   }) {
     const date = new Date(dateStr);
     date.setHours(0, 0, 0, 0);
@@ -82,7 +84,67 @@ export class ReservationService {
       // Calculate price
       const durationHours = endTime - startTime;
       const priceVal = Number(court.pricePerHour);
-      const totalPrice = new Prisma.Decimal(priceVal * durationHours);
+      const originalPriceVal = priceVal * durationHours;
+      let finalPriceVal = originalPriceVal;
+      let discountAppliedVal = 0;
+      let usedVoucherId: string | null = null;
+
+      // Handle Voucher
+      if (voucherCode) {
+        // Lock the voucher for update to prevent concurrent over-usage
+        const voucherRes = await tx.$queryRaw<any[]>`
+          SELECT * FROM "vouchers"
+          WHERE "code" = ${voucherCode.toUpperCase()}
+          FOR UPDATE
+        `;
+
+        if (voucherRes.length === 0) {
+          throw new Error("Kode voucher tidak ditemukan.");
+        }
+
+        const voucher = voucherRes[0];
+
+        if (!voucher.isActive) {
+          throw new Error("Kode voucher sudah tidak aktif.");
+        }
+
+        if (voucher.usedCount >= voucher.maxUses) {
+          throw new Error("Kuota penggunaan voucher sudah habis.");
+        }
+
+        // Check if user has already used this voucher
+        const existingUsage = await tx.reservation.findFirst({
+          where: {
+            userId,
+            voucherId: voucher.id,
+            status: { not: "CANCELED" },
+          },
+        });
+
+        if (existingUsage) {
+          throw new Error("Anda sudah pernah menggunakan kode voucher ini.");
+        }
+
+        if (voucher.discountType === "PERCENTAGE") {
+          discountAppliedVal = (originalPriceVal * Number(voucher.discountPercent)) / 100;
+        } else {
+          discountAppliedVal = Number(voucher.discountNominal) || 0;
+        }
+
+        finalPriceVal = Math.max(0, originalPriceVal - discountAppliedVal);
+        usedVoucherId = voucher.id;
+
+        // Increment usedCount
+        await tx.voucher.update({
+          where: { id: voucher.id },
+          data: { usedCount: { increment: 1 } },
+        });
+      }
+
+      const originalPrice = new Prisma.Decimal(originalPriceVal);
+      const totalPrice = new Prisma.Decimal(finalPriceVal);
+      const discountApplied = discountAppliedVal > 0 ? new Prisma.Decimal(discountAppliedVal) : null;
+      
       const invoiceNumber = this.generateInvoiceNo();
 
       // Set expiration time (15 minutes from now)
@@ -99,6 +161,9 @@ export class ReservationService {
           startTime,
           durationHours,
           totalPrice,
+          originalPrice,
+          discountApplied,
+          voucherId: usedVoucherId,
           status: "PENDING_PAYMENT",
           expiresAt,
         },
@@ -118,7 +183,8 @@ export class ReservationService {
   static async uploadPaymentProof(
     reservationId: string,
     userId: string,
-    paymentProof: string
+    paymentProof: string,
+    paymentMethod?: "TRANSFER_BANK" | "QRIS"
   ) {
     const reservation = await prisma.reservation.findUnique({
       where: { id: reservationId },
@@ -137,6 +203,7 @@ export class ReservationService {
       where: { id: reservationId },
       data: {
         paymentProof,
+        paymentMethod: paymentMethod || "TRANSFER_BANK",
         status: "AWAITING_REVIEW", // Changes to review pending status
       },
     });

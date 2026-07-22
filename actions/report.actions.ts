@@ -3,6 +3,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { serializeForClient } from "@/lib/serialize";
 
 export async function getReportDataAction(startDate?: string, endDate?: string) {
   try {
@@ -40,11 +41,8 @@ export async function getReportDataAction(startDate?: string, endDate?: string) 
       },
     });
 
-    // Convert Decimal totalPrice to standard Number to avoid Next.js Serialization error
-    const plainReservations = reservations.map((res) => ({
-      ...res,
-      totalPrice: Number(res.totalPrice),
-    }));
+    // Convert all Decimal fields to standard Numbers using the serializer
+    const plainReservations = serializeForClient(reservations);
 
     return { success: true, data: plainReservations };
   } catch (error: any) {
